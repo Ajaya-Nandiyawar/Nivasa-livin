@@ -45,6 +45,7 @@ Deploy the `backend/` directory to **Railway** or **Render**.
 | `SMTP_USER` | SMTP username | *From email provider credentials* |
 | `SMTP_PASS` | SMTP password | *From email provider credentials* |
 | `MAIL_FROM` | Sender email address for notifications | `noreply@nivasapg.com` |
+| `ALLOWED_ORIGINS` | *(Optional)* Comma-separated list of additional CORS origins | `https://my-custom-domain.com` |
 
 ### Steps
 1. Create a new service on Railway or Render linking to the GitHub repository.

@@ -10,8 +10,24 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://nivasa-livin.vercel.app',
+  ];
+
+  const envOrigins = process.env.ALLOWED_ORIGINS;
+  if (envOrigins) {
+    allowedOrigins.push(...envOrigins.split(',').map((o) => o.trim()));
+  }
+
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
