@@ -62,9 +62,12 @@ async function runMigrations() {
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, 'utf8');
 
+      // Only execute the Up Migration section of the file
+      const upSql = sql.split(/--\s*Down\s*Migration/i)[0].trim();
+
       await client.query('BEGIN');
       try {
-        await client.query(sql);
+        await client.query(upSql);
         await client.query('INSERT INTO "__migrations" (name) VALUES ($1)', [file]);
         await client.query('COMMIT');
         console.log(`Successfully applied: ${file}`);
