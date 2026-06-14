@@ -13,6 +13,9 @@ export class DatabaseService
       dialect: new PostgresDialect({
         pool: new Pool({
           connectionString: process.env.DATABASE_URL,
+          ssl: process.env.DATABASE_URL?.includes('supabase') || process.env.DATABASE_URL?.includes('render') || process.env.NODE_ENV === 'production'
+            ? { rejectUnauthorized: false }
+            : undefined,
         }),
       }),
     });

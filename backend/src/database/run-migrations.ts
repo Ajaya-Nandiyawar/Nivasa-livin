@@ -10,7 +10,12 @@ async function runMigrations() {
   }
 
   console.log('Connecting to database for migrations...');
-  const client = new Client({ connectionString });
+  const client = new Client({
+    connectionString,
+    ssl: connectionString.includes('supabase') || connectionString.includes('render') || process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : undefined
+  });
   await client.connect();
 
   try {
