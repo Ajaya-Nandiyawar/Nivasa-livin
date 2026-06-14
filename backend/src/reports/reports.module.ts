@@ -5,10 +5,7 @@ import { ReportsController } from './reports.controller';
 import { DatabaseModule } from '../database/database.module';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    CacheModule.register(),
-  ],
+  imports: [DatabaseModule, CacheModule.register()],
   controllers: [ReportsController],
   providers: [ReportsService],
 })

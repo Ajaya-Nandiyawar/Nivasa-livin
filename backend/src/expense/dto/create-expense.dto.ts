@@ -1,4 +1,11 @@
-import { IsString, IsUUID, IsNumber, Min, IsDateString, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsNumber,
+  Min,
+  IsDateString,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateExpenseDto {

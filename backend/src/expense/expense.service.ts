@@ -14,16 +14,25 @@ export class ExpenseService {
     private readonly storageService: StorageService,
   ) {}
 
-  async create(dto: CreateExpenseDto, userId: string, file?: Express.Multer.File) {
+  async create(
+    dto: CreateExpenseDto,
+    userId: string,
+    file?: Express.Multer.File,
+  ) {
     let receiptUrl: string | null = null;
 
     if (file) {
       const fileName = `expenses/${Date.now()}-${file.originalname}`;
-      const uploadResult = await this.storageService.uploadFile(file.buffer, fileName, file.mimetype);
+      const uploadResult = await this.storageService.uploadFile(
+        file.buffer,
+        fileName,
+        file.mimetype,
+      );
       receiptUrl = uploadResult.url;
     }
 
-    const result = await this.db.insertInto('expenses')
+    const result = await this.db
+      .insertInto('expenses')
       .values({
         property_id: dto.property_id,
         category_id: dto.category_id,
@@ -37,12 +46,21 @@ export class ExpenseService {
       .returning('id')
       .executeTakeFirstOrThrow();
 
-    return { message: 'Expense created', id: result.id, receipt_url: receiptUrl };
+    return {
+      message: 'Expense created',
+      id: result.id,
+      receipt_url: receiptUrl,
+    };
   }
 
   async findAll(filter: ExpenseFilterDto) {
-    let query = this.db.selectFrom('expenses')
-      .leftJoin('expense_categories', 'expense_categories.id', 'expenses.category_id')
+    let query = this.db
+      .selectFrom('expenses')
+      .leftJoin(
+        'expense_categories',
+        'expense_categories.id',
+        'expenses.category_id',
+      )
       .select([
         'expenses.id',
         'expenses.title',
@@ -60,10 +78,18 @@ export class ExpenseService {
       query = query.where('expenses.category_id', '=', filter.category_id);
     }
     if (filter.start_date) {
-      query = query.where('expenses.expense_date', '>=', new Date(filter.start_date));
+      query = query.where(
+        'expenses.expense_date',
+        '>=',
+        new Date(filter.start_date),
+      );
     }
     if (filter.end_date) {
-      query = query.where('expenses.expense_date', '<=', new Date(filter.end_date));
+      query = query.where(
+        'expenses.expense_date',
+        '<=',
+        new Date(filter.end_date),
+      );
     }
 
     const limit = filter.limit || 20;
@@ -80,14 +106,15 @@ export class ExpenseService {
   }
 
   async update(id: string, dto: UpdateExpenseDto) {
-    let updateData: any = { updated_at: new Date() };
+    const updateData: any = { updated_at: new Date() };
     if (dto.title) updateData.title = dto.title;
     if (dto.amount !== undefined) updateData.amount = dto.amount.toString();
     if (dto.expense_date) updateData.expense_date = new Date(dto.expense_date);
     if (dto.category_id) updateData.category_id = dto.category_id;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
 
-    const result = await this.db.updateTable('expenses')
+    const result = await this.db
+      .updateTable('expenses')
       .set(updateData)
       .where('id', '=', id)
       .where('deleted_at', 'is', null)
@@ -101,7 +128,8 @@ export class ExpenseService {
   }
 
   async softDelete(id: string) {
-    const result = await this.db.updateTable('expenses')
+    const result = await this.db
+      .updateTable('expenses')
       .set({ deleted_at: new Date() })
       .where('id', '=', id)
       .executeTakeFirst();
@@ -114,7 +142,8 @@ export class ExpenseService {
   }
 
   async createCategory(dto: CreateCategoryDto) {
-    const result = await this.db.insertInto('expense_categories')
+    const result = await this.db
+      .insertInto('expense_categories')
       .values({
         name: dto.name,
         property_id: dto.property_id || null,
@@ -126,7 +155,8 @@ export class ExpenseService {
   }
 
   async getCategories() {
-    return this.db.selectFrom('expense_categories')
+    return this.db
+      .selectFrom('expense_categories')
       .selectAll()
       .where('deleted_at', 'is', null)
       .orderBy('name', 'asc')
@@ -136,15 +166,25 @@ export class ExpenseService {
   async getSummary() {
     // Month-wise financial breakdown grouped by category
     // We use Kysely raw sql for DATE_TRUNC to group by month
-    const result = await this.db.selectFrom('expenses')
-      .leftJoin('expense_categories', 'expense_categories.id', 'expenses.category_id')
+    const result = await this.db
+      .selectFrom('expenses')
+      .leftJoin(
+        'expense_categories',
+        'expense_categories.id',
+        'expenses.category_id',
+      )
       .select([
         'expense_categories.name as category_name',
-        sql<string>`to_char(date_trunc('month', expenses.expense_date), 'YYYY-MM')`.as('month'),
-        sql<number>`SUM(CAST(expenses.amount AS NUMERIC))`.as('total_amount')
+        sql<string>`to_char(date_trunc('month', expenses.expense_date), 'YYYY-MM')`.as(
+          'month',
+        ),
+        sql<number>`SUM(CAST(expenses.amount AS NUMERIC))`.as('total_amount'),
       ])
       .where('expenses.deleted_at', 'is', null)
-      .groupBy(['expense_categories.name', sql`date_trunc('month', expenses.expense_date)`])
+      .groupBy([
+        'expense_categories.name',
+        sql`date_trunc('month', expenses.expense_date)`,
+      ])
       .orderBy('month', 'desc')
       .execute();
 

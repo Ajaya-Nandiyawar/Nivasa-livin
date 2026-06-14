@@ -1,0 +1,156 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Lint Backend
+        run: |
+          cd backend
+          npm run lint
+
+      - name: Typecheck Backend
+        run: |
+          cd backend
+          npx tsc --noEmit
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint Frontend
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Typecheck Frontend
+        run: |
+          cd frontend
+          npx tsc --noEmit
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run Database Migrations
+        run: |
+          # Apply SQL schema migrations in alphabetical order
+          for file in backend/src/database/migrations/*.sql; do
+            echo "Applying migration: $file"
+            PGPASSWORD=postgres psql -h localhost -U postgres -d postgres -f "$file"
+          done
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run Backend Unit Tests
+        run: |
+          cd backend
+          npm run test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
+
+      - name: Run Backend E2E/Integration Tests
+        run: |
+          cd backend
+          npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'test_jwt_access_secret_99999999999' }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'test_jwt_refresh_secret_999999999' }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID || 'test_r2_account_id' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID || 'test_r2_access_key' }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY || 'test_r2_secret_key' }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME || 'test-bucket' }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.mailtrap.io' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '2525' }}
+          SMTP_USER: ${{ secrets.SMTP_USER || 'test_user' }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS || 'test_pass' }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@nivasapg.com' }}
+          PORT: 3001
+
+  build:
+    name: Build Frontend & Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Backend Dependencies & Build
+        run: |
+          cd backend
+          npm ci
+          npm run build
+
+      - name: Install Frontend Dependencies & Build
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1' }}

@@ -103,7 +103,7 @@ export function Charts() {
                   tickFormatter={(value) => `₹${value >= 1000 ? (value / 1000) + 'k' : value}`}
                 />
                 <Tooltip 
-                  formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, undefined]}
+                  formatter={(value: any) => [`₹${Number(value).toLocaleString('en-IN')}`, undefined as any]}
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     borderRadius: '8px', 
@@ -144,7 +144,7 @@ export function Charts() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number) => [value, 'Beds']}
+                  formatter={(value: any) => [value, 'Beds']}
                   contentStyle={{ 
                     backgroundColor: 'hsl(var(--card))', 
                     borderRadius: '8px', 

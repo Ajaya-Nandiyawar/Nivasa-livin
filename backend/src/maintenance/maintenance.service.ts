@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { MailService } from '../core/mail/mail.service';
 import { MaintenanceFilterDto } from './dto/maintenance-filter.dto';
@@ -19,7 +24,8 @@ export class MaintenanceService {
 
   async create(dto: CreateTicketDto, userId: string) {
     return await this.db.transaction().execute(async (trx) => {
-      const result = await trx.insertInto('maintenance_tickets')
+      const result = await trx
+        .insertInto('maintenance_tickets')
         .values({
           property_id: dto.property_id,
           title: dto.title,
@@ -34,12 +40,18 @@ export class MaintenanceService {
         .executeTakeFirstOrThrow();
 
       if (dto.priority === 'URGENT') {
-        const adminEmail = this.configService.get<string>('SMTP_USER') || 'admin@nivasalivin.com';
-        await this.mailService.sendMail(
-          adminEmail,
-          `URGENT MAINTENANCE ALERT: ${dto.title}`,
-          `An urgent maintenance ticket has been opened.\nTitle: ${dto.title}\nDescription: ${dto.description}`,
-        ).catch(err => this.logger.error('Failed to send urgent maintenance email', err));
+        const adminEmail =
+          this.configService.get<string>('SMTP_USER') ||
+          'admin@nivasalivin.com';
+        await this.mailService
+          .sendMail(
+            adminEmail,
+            `URGENT MAINTENANCE ALERT: ${dto.title}`,
+            `An urgent maintenance ticket has been opened.\nTitle: ${dto.title}\nDescription: ${dto.description}`,
+          )
+          .catch((err) =>
+            this.logger.error('Failed to send urgent maintenance email', err),
+          );
       }
 
       return { message: 'Ticket created successfully', id: result.id };
@@ -47,8 +59,13 @@ export class MaintenanceService {
   }
 
   async findAll(filter: MaintenanceFilterDto) {
-    let query = this.db.selectFrom('maintenance_tickets')
-      .leftJoin('properties', 'properties.id', 'maintenance_tickets.property_id')
+    let query = this.db
+      .selectFrom('maintenance_tickets')
+      .leftJoin(
+        'properties',
+        'properties.id',
+        'maintenance_tickets.property_id',
+      )
       .leftJoin('rooms', 'rooms.id', 'maintenance_tickets.room_id')
       .select([
         'maintenance_tickets.id',
@@ -93,7 +110,8 @@ export class MaintenanceService {
   }
 
   async findOne(id: string) {
-    const ticket = await this.db.selectFrom('maintenance_tickets')
+    const ticket = await this.db
+      .selectFrom('maintenance_tickets')
       .selectAll()
       .where('id', '=', id)
       .where('deleted_at', 'is', null)
@@ -112,7 +130,8 @@ export class MaintenanceService {
       newStatus = 'IN_PROGRESS';
     }
 
-    const result = await this.db.updateTable('maintenance_tickets')
+    const result = await this.db
+      .updateTable('maintenance_tickets')
       .set({
         status: newStatus,
         assigned_to: dto.assigned_to || ticket.assigned_to,
@@ -126,7 +145,8 @@ export class MaintenanceService {
 
   async resolve(id: string, dto: ResolveTicketDto, userId: string) {
     return await this.db.transaction().execute(async (trx) => {
-      const ticket = await trx.selectFrom('maintenance_tickets')
+      const ticket = await trx
+        .selectFrom('maintenance_tickets')
         .selectAll()
         .where('id', '=', id)
         .where('deleted_at', 'is', null)
@@ -134,16 +154,21 @@ export class MaintenanceService {
 
       if (!ticket) throw new NotFoundException('Ticket not found');
       if (ticket.status === 'RESOLVED' || ticket.status === 'CANCELLED') {
-        throw new BadRequestException(`Cannot resolve a ticket that is already ${ticket.status}`);
+        throw new BadRequestException(
+          `Cannot resolve a ticket that is already ${ticket.status}`,
+        );
       }
 
       // b. Update ticket status to RESOLVED
-      await trx.updateTable('maintenance_tickets')
+      await trx
+        .updateTable('maintenance_tickets')
         .set({
           status: 'RESOLVED',
           resolution_notes: dto.resolution_notes,
           resolved_at: new Date(),
-          cost_incurred: dto.cost_incurred ? dto.cost_incurred.toString() : null,
+          cost_incurred: dto.cost_incurred
+            ? dto.cost_incurred.toString()
+            : null,
           updated_at: new Date(),
         })
         .where('id', '=', id)
@@ -152,13 +177,15 @@ export class MaintenanceService {
       // c. Log expense if cost > 0
       if (dto.cost_incurred && dto.cost_incurred > 0) {
         // Find "Repairs" category
-        const repairsCat = await trx.selectFrom('expense_categories')
+        const repairsCat = await trx
+          .selectFrom('expense_categories')
           .select('id')
           .where('name', '=', 'Repairs')
           .executeTakeFirst();
 
         if (repairsCat) {
-          await trx.insertInto('expenses')
+          await trx
+            .insertInto('expenses')
             .values({
               property_id: ticket.property_id,
               category_id: repairsCat.id,
@@ -175,16 +202,18 @@ export class MaintenanceService {
       // d. Revert asset status if it was MAINTENANCE
       if (ticket.bed_id) {
         // Find if any ACTIVE bookings exist on this bed to know if it should be OCCUPIED or VACANT
-        const activeBooking = await trx.selectFrom('bookings')
+        const activeBooking = await trx
+          .selectFrom('bookings')
           .select('id')
           .where('bed_id', '=', ticket.bed_id)
           .where('status', '=', 'ACTIVE')
           .where('deleted_at', 'is', null)
           .executeTakeFirst();
-        
+
         const newBedStatus = activeBooking ? 'OCCUPIED' : 'VACANT';
-        
-        await trx.updateTable('beds')
+
+        await trx
+          .updateTable('beds')
           .set({ status: newBedStatus, updated_at: new Date() })
           .where('id', '=', ticket.bed_id)
           .where('status', '=', 'MAINTENANCE') // only revert if it is currently MAINTENANCE
@@ -193,7 +222,8 @@ export class MaintenanceService {
 
       if (ticket.room_id) {
         // Determine room status based on beds (naive check)
-        await trx.updateTable('rooms')
+        await trx
+          .updateTable('rooms')
           .set({ status: 'AVAILABLE', updated_at: new Date() })
           .where('id', '=', ticket.room_id)
           .where('status', '=', 'MAINTENANCE')

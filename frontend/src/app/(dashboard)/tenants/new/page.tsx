@@ -45,7 +45,7 @@ export default function AddTenantPage() {
   const { mutate: createTenant, isPending } = useCreateTenantMutation();
 
   const { register, handleSubmit, trigger, getValues, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as any,
     defaultValues: {
       full_name: "", phone: "", email: "", dob: "",
       occupation: "", emergency_contact_name: "", emergency_contact_phone: "",

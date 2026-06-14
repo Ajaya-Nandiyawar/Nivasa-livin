@@ -19,23 +19,42 @@ import { StorageService } from '../core/storage/storage.service';
 function createQueryBuilderMock(executeResult: unknown = []) {
   const chain: Record<string, jest.Mock> = {};
   const methods = [
-    'selectFrom', 'insertInto', 'updateTable', 'deleteFrom',
-    'select', 'selectAll', 'where', 'set', 'values',
-    'leftJoin', 'orderBy', 'limit', 'offset', 'returning',
-    'returning', 'on', 'onRef',
+    'selectFrom',
+    'insertInto',
+    'updateTable',
+    'deleteFrom',
+    'select',
+    'selectAll',
+    'where',
+    'set',
+    'values',
+    'leftJoin',
+    'orderBy',
+    'limit',
+    'offset',
+    'returning',
+    'returning',
+    'on',
+    'onRef',
   ];
 
   methods.forEach((method) => {
-    chain[method] = jest.fn().mockReturnValue(chain);
+    chain[method] = jest.fn().mockImplementation(function (this: any) {
+      return this;
+    });
   });
 
   chain['execute'] = jest.fn().mockResolvedValue(executeResult);
-  chain['executeTakeFirst'] = jest.fn().mockResolvedValue(
-    Array.isArray(executeResult) ? executeResult[0] : executeResult,
-  );
-  chain['executeTakeFirstOrThrow'] = jest.fn().mockResolvedValue(
-    Array.isArray(executeResult) ? executeResult[0] : executeResult,
-  );
+  chain['executeTakeFirst'] = jest
+    .fn()
+    .mockResolvedValue(
+      Array.isArray(executeResult) ? executeResult[0] : executeResult,
+    );
+  chain['executeTakeFirstOrThrow'] = jest
+    .fn()
+    .mockResolvedValue(
+      Array.isArray(executeResult) ? executeResult[0] : executeResult,
+    );
 
   return chain;
 }
@@ -75,7 +94,9 @@ describe('RentService', () => {
         {
           provide: StorageService,
           useValue: {
-            uploadFile: jest.fn().mockResolvedValue({ url: 'https://r2.example.com/receipt.pdf' }),
+            uploadFile: jest
+              .fn()
+              .mockResolvedValue({ url: 'https://r2.example.com/receipt.pdf' }),
           },
         },
       ],
@@ -183,10 +204,16 @@ describe('RentService', () => {
 
       mockDb.selectFrom.mockImplementation((table: string) => {
         if (table === 'bookings') {
-          return { ...mockDb, execute: jest.fn().mockResolvedValue(activeBookings) };
+          return {
+            ...mockDb,
+            execute: jest.fn().mockResolvedValue(activeBookings),
+          };
         }
         if (table === 'rent_records') {
-          return { ...mockDb, executeTakeFirst: jest.fn().mockResolvedValue(undefined) };
+          return {
+            ...mockDb,
+            executeTakeFirst: jest.fn().mockResolvedValue(undefined),
+          };
         }
         return mockDb;
       });
@@ -207,7 +234,7 @@ describe('RentService', () => {
 
       expect(capturedValues.length).toBe(1);
       const insertedRecord = capturedValues[0] as Record<string, unknown>;
-      expect(insertedRecord.period_month).toBe(7);   // July
+      expect(insertedRecord.period_month).toBe(7); // July
       expect(insertedRecord.period_year).toBe(2026);
       expect(insertedRecord.status).toBe('PENDING');
       expect(insertedRecord.rent_amount).toBe('12000');
@@ -223,16 +250,21 @@ describe('RentService', () => {
       let rentQueryCount = 0;
       mockDb.selectFrom.mockImplementation((table: string) => {
         if (table === 'bookings') {
-          return { ...mockDb, execute: jest.fn().mockResolvedValue(activeBookings) };
+          return {
+            ...mockDb,
+            execute: jest.fn().mockResolvedValue(activeBookings),
+          };
         }
         if (table === 'rent_records') {
           rentQueryCount++;
           return {
             ...mockDb,
             // First call: existing record; second call: no record
-            executeTakeFirst: jest.fn().mockResolvedValue(
-              rentQueryCount === 1 ? { id: 'existing' } : undefined,
-            ),
+            executeTakeFirst: jest
+              .fn()
+              .mockResolvedValue(
+                rentQueryCount === 1 ? { id: 'existing' } : undefined,
+              ),
           };
         }
         return mockDb;
@@ -306,7 +338,11 @@ describe('RentService', () => {
       const result = await service.findDue();
 
       expect(Array.isArray(result)).toBe(true);
-      expect(result.every((r: { status: string }) => ['PENDING', 'PARTIAL', 'OVERDUE'].includes(r.status))).toBe(true);
+      expect(
+        result.every((r: { status: string }) =>
+          ['PENDING', 'PARTIAL', 'OVERDUE'].includes(r.status),
+        ),
+      ).toBe(true);
     });
   });
 });

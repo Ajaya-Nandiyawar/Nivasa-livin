@@ -1,16 +1,31 @@
-import { ColumnType, Generated, Insertable, Selectable, Updateable } from 'kysely';
+import {
+  ColumnType,
+  Generated,
+  Insertable,
+  Selectable,
+  Updateable,
+} from 'kysely';
 
 // 1. Enums
 export type RoleEnum = 'SUPER_ADMIN' | 'PG_ADMIN' | 'MANAGER' | 'VIEWER';
 export type RoomTypeEnum = 'SINGLE' | 'DOUBLE' | 'TRIPLE' | 'DORM';
 export type RoomStatusEnum = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';
 export type BedStatusEnum = 'VACANT' | 'OCCUPIED' | 'RESERVED' | 'MAINTENANCE';
-export type DocumentTypeEnum = 'AADHAAR' | 'PAN' | 'PHOTO' | 'AGREEMENT' | 'OTHER';
+export type DocumentTypeEnum =
+  | 'AADHAAR'
+  | 'PAN'
+  | 'PHOTO'
+  | 'AGREEMENT'
+  | 'OTHER';
 export type BookingStatusEnum = 'ACTIVE' | 'CHECKED_OUT' | 'TRANSFERRED';
 export type RentStatusEnum = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
 export type PaymentModeEnum = 'CASH' | 'UPI' | 'BANK_TRANSFER' | 'CHEQUE';
 export type TicketPriorityEnum = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-export type TicketStatusEnum = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CANCELLED';
+export type TicketStatusEnum =
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CANCELLED';
 
 // 2. Tables
 export interface UsersTable {

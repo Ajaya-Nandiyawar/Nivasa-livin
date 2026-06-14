@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ExpenseService } from './expense.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -48,7 +60,10 @@ export class ExpenseController {
 
   @Patch(':id')
   @Roles('SUPER_ADMIN', 'PG_ADMIN')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateExpenseDto: UpdateExpenseDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateExpenseDto: UpdateExpenseDto,
+  ) {
     return this.expenseService.update(id, updateExpenseDto);
   }
 

@@ -1,6 +1,9 @@
 import { IsOptional, IsUUID, IsIn, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { TicketStatusEnum, TicketPriorityEnum } from '../../database/types';
+import type {
+  TicketStatusEnum,
+  TicketPriorityEnum,
+} from '../../database/types';
 
 export class MaintenanceFilterDto {
   @IsOptional()

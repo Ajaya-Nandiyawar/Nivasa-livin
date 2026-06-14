@@ -67,7 +67,10 @@ describe('AuthController (integration)', () => {
   afterAll(async () => {
     if (testUserId) {
       // Clean up: revoke tokens then delete user
-      await db.deleteFrom('refresh_tokens').where('user_id', '=', testUserId).execute();
+      await db
+        .deleteFrom('refresh_tokens')
+        .where('user_id', '=', testUserId)
+        .execute();
       await db.deleteFrom('users').where('id', '=', testUserId).execute();
     }
     await app.close();
@@ -104,8 +107,12 @@ describe('AuthController (integration)', () => {
       const setCookieHeader = response.headers['set-cookie'];
       expect(setCookieHeader).toBeDefined();
 
-      const cookies = Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
-      const refreshCookie = cookies.find((c: string) => c.startsWith('refresh_token='));
+      const cookies = Array.isArray(setCookieHeader)
+        ? setCookieHeader
+        : [setCookieHeader];
+      const refreshCookie = cookies.find((c: string) =>
+        c.startsWith('refresh_token='),
+      );
 
       expect(refreshCookie).toBeDefined();
       expect(refreshCookie).toContain('HttpOnly');
@@ -152,9 +159,7 @@ describe('AuthController (integration)', () => {
 
   describe('GET /api/v1/auth/me', () => {
     it('should return 401 when no token is provided', async () => {
-      await request(app.getHttpServer())
-        .get('/api/v1/auth/me')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/v1/auth/me').expect(401);
     });
 
     it('should return the current user profile for a valid token', async () => {

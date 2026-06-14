@@ -23,7 +23,11 @@ export class StorageService {
     });
   }
 
-  async uploadFile(fileBuffer: Buffer, fileName: string, contentType: string): Promise<{ url: string, key: string }> {
+  async uploadFile(
+    fileBuffer: Buffer,
+    fileName: string,
+    contentType: string,
+  ): Promise<{ url: string; key: string }> {
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
@@ -33,9 +37,9 @@ export class StorageService {
       });
 
       await this.s3Client.send(command);
-      
+
       this.logger.log(`File uploaded successfully: ${fileName}`);
-      
+
       // Assume public bucket routing for simplicity
       const url = `https://cdn.nivasapg.com/${fileName}`;
       return { url, key: fileName };

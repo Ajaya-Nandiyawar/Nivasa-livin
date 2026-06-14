@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
 import { MailService } from '../core/mail/mail.service';
@@ -19,7 +24,7 @@ export class RentService {
   ) {}
 
   // CRON JOBS
-  
+
   // 1st of every month at 8:00 AM
   @Cron('0 8 1 * *')
   async generateMonthlyRent() {
@@ -50,21 +55,26 @@ export class RentService {
         const dueDate = new Date();
         dueDate.setDate(booking.billing_date);
 
-        await this.db.insertInto('rent_records').values({
-          booking_id: booking.id,
-          tenant_id: booking.tenant_id,
-          period_month: periodMonth,
-          period_year: periodYear,
-          rent_amount: booking.monthly_rent,
-          due_date: dueDate,
-          status: 'PENDING',
-        }).execute();
+        await this.db
+          .insertInto('rent_records')
+          .values({
+            booking_id: booking.id,
+            tenant_id: booking.tenant_id,
+            period_month: periodMonth,
+            period_year: periodYear,
+            rent_amount: booking.monthly_rent,
+            due_date: dueDate,
+            status: 'PENDING',
+          })
+          .execute();
 
         count++;
       }
     }
 
-    this.logger.log(`Generated ${count} new rent records for ${periodMonth}/${periodYear}.`);
+    this.logger.log(
+      `Generated ${count} new rent records for ${periodMonth}/${periodYear}.`,
+    );
     return { generated: count };
   }
 
@@ -91,7 +101,8 @@ export class RentService {
   }
 
   async findAll(filterDto: RentFilterDto) {
-    let query = this.db.selectFrom('rent_records')
+    let query = this.db
+      .selectFrom('rent_records')
       .leftJoin('tenants', 'tenants.id', 'rent_records.tenant_id')
       .select([
         'rent_records.id',
@@ -107,10 +118,18 @@ export class RentService {
       .where('rent_records.deleted_at', 'is', null);
 
     if (filterDto.period_month) {
-      query = query.where('rent_records.period_month', '=', filterDto.period_month);
+      query = query.where(
+        'rent_records.period_month',
+        '=',
+        filterDto.period_month,
+      );
     }
     if (filterDto.period_year) {
-      query = query.where('rent_records.period_year', '=', filterDto.period_year);
+      query = query.where(
+        'rent_records.period_year',
+        '=',
+        filterDto.period_year,
+      );
     }
     if (filterDto.status) {
       query = query.where('rent_records.status', '=', filterDto.status);
@@ -123,7 +142,8 @@ export class RentService {
   }
 
   async findDue() {
-    return this.db.selectFrom('rent_records')
+    return this.db
+      .selectFrom('rent_records')
       .leftJoin('tenants', 'tenants.id', 'rent_records.tenant_id')
       .select([
         'rent_records.id',
@@ -141,7 +161,8 @@ export class RentService {
   }
 
   async findOne(id: string) {
-    const record = await this.db.selectFrom('rent_records')
+    const record = await this.db
+      .selectFrom('rent_records')
       .selectAll()
       .where('id', '=', id)
       .where('deleted_at', 'is', null)
@@ -153,7 +174,8 @@ export class RentService {
 
   async recordPayment(id: string, dto: PaymentDto, userId: string) {
     return await this.db.transaction().execute(async (trx) => {
-      const rentRecord = await trx.selectFrom('rent_records')
+      const rentRecord = await trx
+        .selectFrom('rent_records')
         .leftJoin('tenants', 'tenants.id', 'rent_records.tenant_id')
         .select([
           'rent_records.id',
@@ -183,10 +205,15 @@ export class RentService {
       // Generate PDF in memory
       const pdfBuffer = await this.generatePdfReceipt(rentRecord, dto);
       const fileName = `receipts/${rentRecord.id}/${Date.now()}.pdf`;
-      const uploadResult = await this.storageService.uploadFile(pdfBuffer, fileName, 'application/pdf');
+      const uploadResult = await this.storageService.uploadFile(
+        pdfBuffer,
+        fileName,
+        'application/pdf',
+      );
 
       // Insert payment
-      await trx.insertInto('payments')
+      await trx
+        .insertInto('payments')
         .values({
           rent_record_id: id,
           amount: dto.amount.toString(),
@@ -202,7 +229,8 @@ export class RentService {
       const newBalance = currentBalance - dto.amount;
       const newStatus = newBalance === 0 ? 'PAID' : 'PARTIAL';
 
-      await trx.updateTable('rent_records')
+      await trx
+        .updateTable('rent_records')
         .set({
           paid_amount: newPaid.toString(),
           balance: newBalance.toString(),
@@ -216,17 +244,21 @@ export class RentService {
       if (rentRecord.email) {
         await this.mailService.sendMail(
           rentRecord.email,
-          'Payment Receipt - Nivasa PG',
+          'Payment Receipt - NIVASA',
           `Your payment of ₹${dto.amount} was received. Receipt: ${uploadResult.url}`,
         );
       }
 
-      return { message: 'Payment recorded successfully', receipt_url: uploadResult.url };
+      return {
+        message: 'Payment recorded successfully',
+        receipt_url: uploadResult.url,
+      };
     });
   }
 
   async getReceipt(id: string) {
-    const payment = await this.db.selectFrom('payments')
+    const payment = await this.db
+      .selectFrom('payments')
       .select('receipt_url')
       .where('rent_record_id', '=', id)
       .orderBy('created_at', 'desc')
@@ -239,7 +271,10 @@ export class RentService {
     return { receipt_url: payment.receipt_url };
   }
 
-  private async generatePdfReceipt(record: any, paymentDto: PaymentDto): Promise<Buffer> {
+  private async generatePdfReceipt(
+    record: any,
+    paymentDto: PaymentDto,
+  ): Promise<Buffer> {
     return new Promise((resolve) => {
       const doc = new PDFDocument();
       const buffers: Buffer[] = [];
@@ -247,7 +282,7 @@ export class RentService {
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
 
-      doc.fontSize(20).text('NIVASA PG - PAYMENT RECEIPT', { align: 'center' });
+      doc.fontSize(20).text('NIVASA - PAYMENT RECEIPT', { align: 'center' });
       doc.moveDown();
       doc.fontSize(12).text(`Tenant: ${record.full_name}`);
       doc.text(`Period: ${record.period_month}/${record.period_year}`);
@@ -257,7 +292,9 @@ export class RentService {
         doc.text(`Reference No: ${paymentDto.reference_number}`);
       }
       doc.moveDown();
-      doc.text(`Remaining Balance: ₹${parseFloat(record.balance) - paymentDto.amount}`);
+      doc.text(
+        `Remaining Balance: ₹${parseFloat(record.balance) - paymentDto.amount}`,
+      );
       doc.end();
     });
   }

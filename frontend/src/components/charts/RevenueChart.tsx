@@ -37,7 +37,7 @@ export function RevenueChart() {
                 tickFormatter={(value) => `₹${value / 1000}k`}
               />
               <Tooltip 
-                formatter={(value: number) => [`₹${value.toLocaleString()}`, undefined]}
+                formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, undefined as any]}
                 contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-border)' }}
               />
               <Legend verticalAlign="top" height={36}/>

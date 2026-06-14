@@ -39,7 +39,7 @@ export function Header() {
         {/* Dynamic Breadcrumbs */}
         <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground font-medium transition-colors">
-            Nivasa PG
+            NIVASA
           </Link>
           {breadcrumbs.map((crumb, idx) => (
             <span key={idx} className="flex items-center gap-2">

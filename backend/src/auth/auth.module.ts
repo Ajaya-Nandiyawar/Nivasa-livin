@@ -28,7 +28,7 @@ import { MailModule } from '../core/mail/mail.module';
   ],
   controllers: [AuthController],
   providers: [
-    AuthService, 
+    AuthService,
     JwtStrategy,
     {
       provide: APP_GUARD,
@@ -37,7 +37,7 @@ import { MailModule } from '../core/mail/mail.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
-    }
+    },
   ],
 })
 export class AuthModule {}

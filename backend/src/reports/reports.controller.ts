@@ -1,4 +1,10 @@
-import { Controller, Get, Query, UseInterceptors, Header } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseInterceptors,
+  Header,
+} from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { ReportsService } from './reports.service';
 import { ReportFilterDto } from './dto/report-filter.dto';

@@ -1,11 +1,21 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { MailService } from '../core/mail/mail.service';
 import { StorageService } from '../core/storage/storage.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { TenantFilterDto } from './dto/tenant-filter.dto';
-import { BedStatusEnum, BookingStatusEnum, RentStatusEnum } from '../database/types';
+import {
+  BedStatusEnum,
+  BookingStatusEnum,
+  RentStatusEnum,
+} from '../database/types';
 
 @Injectable()
 export class TenantService {
@@ -20,20 +30,23 @@ export class TenantService {
   async create(dto: CreateTenantDto) {
     // We execute the complex onboarding in a strict transaction
     const result = await this.db.transaction().execute(async (trx) => {
-      
       // 1. Check duplicates
       const existing = await trx
         .selectFrom('tenants')
         .select('id')
-        .where((eb) => eb.or([
-          eb('phone', '=', dto.phone),
-          eb('aadhaar_number', '=', dto.aadhaar_number)
-        ]))
+        .where((eb) =>
+          eb.or([
+            eb('phone', '=', dto.phone),
+            eb('aadhaar_number', '=', dto.aadhaar_number),
+          ]),
+        )
         .where('deleted_at', 'is', null)
         .executeTakeFirst();
-        
+
       if (existing) {
-        throw new ConflictException('A tenant with this phone or Aadhaar already exists');
+        throw new ConflictException(
+          'A tenant with this phone or Aadhaar already exists',
+        );
       }
 
       // 2. Verify bed is VACANT
@@ -96,7 +109,7 @@ export class TenantService {
       // 6. Generate first Rent Record
       const periodMonth = new Date().getMonth() + 1;
       const periodYear = new Date().getFullYear();
-      
+
       const dueDate = new Date();
       dueDate.setDate(dto.billing_date);
 
@@ -120,9 +133,9 @@ export class TenantService {
     try {
       await this.mailService.sendMail(
         dto.email,
-        'Welcome to Nivasa PG',
-        `Dear ${dto.full_name},\n\nWelcome to Nivasa PG! Your booking is confirmed.`,
-        `<h1>Welcome to Nivasa PG!</h1><p>Dear ${dto.full_name}, your booking is confirmed.</p>`
+        'Welcome to NIVASA',
+        `Dear ${dto.full_name},\n\nWelcome to NIVASA! Your booking is confirmed.`,
+        `<h1>Welcome to NIVASA!</h1><p>Dear ${dto.full_name}, your booking is confirmed.</p>`,
       );
     } catch (e) {
       this.logger.error(`Failed to send welcome email to ${dto.email}`, e);
@@ -134,9 +147,12 @@ export class TenantService {
 
   async findAll(filterDto: TenantFilterDto) {
     // Build query with full joins for rich list view
-    let query = this.db.selectFrom('tenants')
+    let query = this.db
+      .selectFrom('tenants')
       .leftJoin('bookings', (join) =>
-        join.onRef('bookings.tenant_id', '=', 'tenants.id').on('bookings.status', '=', 'ACTIVE')
+        join
+          .onRef('bookings.tenant_id', '=', 'tenants.id')
+          .on('bookings.status', '=', 'ACTIVE'),
       )
       .leftJoin('beds', 'beds.id', 'bookings.bed_id')
       .leftJoin('rooms', 'rooms.id', 'beds.room_id')
@@ -165,10 +181,12 @@ export class TenantService {
 
     if (filterDto.search) {
       const s = `%${filterDto.search}%`;
-      query = query.where((eb) => eb.or([
-        eb('tenants.full_name', 'ilike', s),
-        eb('tenants.phone', 'ilike', s),
-      ]));
+      query = query.where((eb) =>
+        eb.or([
+          eb('tenants.full_name', 'ilike', s),
+          eb('tenants.phone', 'ilike', s),
+        ]),
+      );
     }
 
     const limit = filterDto.limit || 20;
@@ -176,9 +194,16 @@ export class TenantService {
     const offset = (page - 1) * limit;
 
     const [items, countResult] = await Promise.all([
-      query.limit(limit).offset(offset).orderBy('tenants.created_at', 'desc').execute(),
-      this.db.selectFrom('tenants').select((eb) => eb.fn.countAll<number>().as('total'))
-        .where('deleted_at', 'is', null).executeTakeFirstOrThrow(),
+      query
+        .limit(limit)
+        .offset(offset)
+        .orderBy('tenants.created_at', 'desc')
+        .execute(),
+      this.db
+        .selectFrom('tenants')
+        .select((eb) => eb.fn.countAll<number>().as('total'))
+        .where('deleted_at', 'is', null)
+        .executeTakeFirstOrThrow(),
     ]);
 
     return {
@@ -267,7 +292,7 @@ export class TenantService {
       .where('tenant_id', '=', tenantId)
       .where('deleted_at', 'is', null)
       .execute();
-      
+
     return docs;
   }
 }

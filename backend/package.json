@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migration:run": "node dist/database/run-migrations.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1068.0",
@@ -94,6 +95,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!kysely/)"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],

@@ -4,7 +4,10 @@ import { Pool } from 'pg';
 import { DB } from './types'; // We will define this next
 
 @Injectable()
-export class DatabaseService extends Kysely<DB> implements OnModuleInit, OnModuleDestroy {
+export class DatabaseService
+  extends Kysely<DB>
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
     super({
       dialect: new PostgresDialect({

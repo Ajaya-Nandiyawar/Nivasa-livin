@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { MailService } from '../core/mail/mail.service';
 import { BookingFilterDto } from './dto/booking-filter.dto';
@@ -15,7 +20,8 @@ export class BookingService {
   ) {}
 
   async findAll(filterDto: BookingFilterDto) {
-    let query = this.db.selectFrom('bookings')
+    let query = this.db
+      .selectFrom('bookings')
       .leftJoin('tenants', 'tenants.id', 'bookings.tenant_id')
       .leftJoin('beds', 'beds.id', 'bookings.bed_id')
       .leftJoin('rooms', 'rooms.id', 'beds.room_id')
@@ -51,7 +57,8 @@ export class BookingService {
   }
 
   async findOne(id: string) {
-    const booking = await this.db.selectFrom('bookings')
+    const booking = await this.db
+      .selectFrom('bookings')
       .leftJoin('tenants', 'tenants.id', 'bookings.tenant_id')
       .leftJoin('beds', 'beds.id', 'bookings.bed_id')
       .selectAll('bookings')
@@ -74,11 +81,16 @@ export class BookingService {
   async processCheckout(id: string, dto: CheckoutDto) {
     return await this.db.transaction().execute(async (trx) => {
       // a. Validate the booking is currently 'ACTIVE'
-      const booking = await trx.selectFrom('bookings')
+      const booking = await trx
+        .selectFrom('bookings')
         .leftJoin('tenants', 'tenants.id', 'bookings.tenant_id')
         .select([
-          'bookings.id', 'bookings.status', 'bookings.bed_id',
-          'bookings.security_deposit', 'tenants.email', 'tenants.full_name'
+          'bookings.id',
+          'bookings.status',
+          'bookings.bed_id',
+          'bookings.security_deposit',
+          'tenants.email',
+          'tenants.full_name',
         ])
         .where('bookings.id', '=', id)
         .where('bookings.deleted_at', 'is', null)
@@ -86,24 +98,33 @@ export class BookingService {
 
       if (!booking) throw new NotFoundException('Booking not found');
       if (booking.status !== 'ACTIVE') {
-        throw new BadRequestException(`Cannot check out a booking with status ${booking.status}`);
+        throw new BadRequestException(
+          `Cannot check out a booking with status ${booking.status}`,
+        );
       }
 
       // b. Check for unpaid rent_records associated with this booking
-      const unpaidRents = await trx.selectFrom('rent_records')
+      const unpaidRents = await trx
+        .selectFrom('rent_records')
         .select(['balance'])
         .where('booking_id', '=', id)
         .where('status', 'in', ['PENDING', 'PARTIAL', 'OVERDUE'])
         .where('deleted_at', 'is', null)
         .execute();
 
-      const totalUnpaid = unpaidRents.reduce((sum, record) => sum + parseFloat(record.balance), 0);
+      const totalUnpaid = unpaidRents.reduce(
+        (sum, record) => sum + parseFloat(record.balance),
+        0,
+      );
       const securityDeposit = parseFloat(booking.security_deposit);
       const refundAmount = securityDeposit - totalUnpaid;
 
       // c. Update the booking status to 'CHECKED_OUT'
-      const checkOutDate = dto.check_out_date ? new Date(dto.check_out_date) : new Date();
-      await trx.updateTable('bookings')
+      const checkOutDate = dto.check_out_date
+        ? new Date(dto.check_out_date)
+        : new Date();
+      await trx
+        .updateTable('bookings')
         .set({
           status: 'CHECKED_OUT',
           check_out_date: checkOutDate,
@@ -114,7 +135,8 @@ export class BookingService {
         .execute();
 
       // d. Update the associated bed status back to 'VACANT'
-      await trx.updateTable('beds')
+      await trx
+        .updateTable('beds')
         .set({ status: 'VACANT', updated_at: new Date() })
         .where('id', '=', booking.bed_id)
         .execute();
@@ -122,15 +144,19 @@ export class BookingService {
       // e. (In a complete system, we would insert a ledger entry for the deposit refund here)
       // We skip actual ledger table insertion since it's not strictly specified in DB schema,
       // but we log it as requested.
-      this.logger.log(`Checkout ${id}: Dep: ${securityDeposit}, Unpaid: ${totalUnpaid}, Refund: ${refundAmount}`);
+      this.logger.log(
+        `Checkout ${id}: Dep: ${securityDeposit}, Unpaid: ${totalUnpaid}, Refund: ${refundAmount}`,
+      );
 
       // f. Trigger email
       if (booking.email) {
-        await this.mailService.sendMail(
-          booking.email,
-          'Check-Out Summary - Nivasa PG',
-          `Dear ${booking.full_name}, your check-out is complete. Deposit: ₹${securityDeposit}. Deductions: ₹${totalUnpaid}. Refund: ₹${refundAmount}.`,
-        ).catch(e => this.logger.error('Failed to send checkout email', e));
+        await this.mailService
+          .sendMail(
+            booking.email,
+            'Check-Out Summary - NIVASA',
+            `Dear ${booking.full_name}, your check-out is complete. Deposit: ₹${securityDeposit}. Deductions: ₹${totalUnpaid}. Refund: ₹${refundAmount}.`,
+          )
+          .catch((e) => this.logger.error('Failed to send checkout email', e));
       }
 
       return {
@@ -144,7 +170,8 @@ export class BookingService {
 
   async processTransfer(id: string, dto: TransferDto) {
     return await this.db.transaction().execute(async (trx) => {
-      const oldBooking = await trx.selectFrom('bookings')
+      const oldBooking = await trx
+        .selectFrom('bookings')
         .selectAll()
         .where('id', '=', id)
         .where('deleted_at', 'is', null)
@@ -152,11 +179,14 @@ export class BookingService {
 
       if (!oldBooking) throw new NotFoundException('Booking not found');
       if (oldBooking.status !== 'ACTIVE') {
-        throw new BadRequestException('Only ACTIVE bookings can be transferred');
+        throw new BadRequestException(
+          'Only ACTIVE bookings can be transferred',
+        );
       }
 
       // a. Verify the new_bed_id currently has a status of 'VACANT'
-      const newBed = await trx.selectFrom('beds')
+      const newBed = await trx
+        .selectFrom('beds')
         .select(['id', 'status', 'room_id'])
         .where('id', '=', dto.new_bed_id)
         .executeTakeFirst();
@@ -169,15 +199,17 @@ export class BookingService {
       // We need to fetch the room's rent to set the new monthly_rent if they differ
       // Or keep the old rent. The prompt says "create a NEW bookings record".
       // We'll use the new room's rent.
-      const room = await trx.selectFrom('rooms')
+      const room = await trx
+        .selectFrom('rooms')
         .select('monthly_rent')
         .where('id', '=', newBed.room_id)
         .executeTakeFirst();
-      
+
       const newMonthlyRent = room ? room.monthly_rent : oldBooking.monthly_rent;
 
       // b. Update the current booking status to 'TRANSFERRED'
-      await trx.updateTable('bookings')
+      await trx
+        .updateTable('bookings')
         .set({
           status: 'TRANSFERRED',
           check_out_date: new Date(dto.transfer_date),
@@ -187,13 +219,15 @@ export class BookingService {
         .execute();
 
       // c. Update the old bed status back to 'VACANT'
-      await trx.updateTable('beds')
+      await trx
+        .updateTable('beds')
         .set({ status: 'VACANT', updated_at: new Date() })
         .where('id', '=', oldBooking.bed_id)
         .execute();
 
       // d. Create a NEW bookings record for the tenant
-      const newBooking = await trx.insertInto('bookings')
+      const newBooking = await trx
+        .insertInto('bookings')
         .values({
           tenant_id: oldBooking.tenant_id,
           bed_id: dto.new_bed_id,
@@ -207,7 +241,8 @@ export class BookingService {
         .executeTakeFirstOrThrow();
 
       // e. Update the new bed status to 'OCCUPIED'
-      await trx.updateTable('beds')
+      await trx
+        .updateTable('beds')
         .set({ status: 'OCCUPIED', updated_at: new Date() })
         .where('id', '=', dto.new_bed_id)
         .execute();
@@ -216,7 +251,8 @@ export class BookingService {
       const periodMonth = new Date().getMonth() + 1;
       const periodYear = new Date().getFullYear();
 
-      await trx.updateTable('rent_records')
+      await trx
+        .updateTable('rent_records')
         .set({ booking_id: newBooking.id, updated_at: new Date() })
         .where('booking_id', '=', id)
         .where('status', 'in', ['PENDING', 'PARTIAL'])

@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -55,7 +61,10 @@ export class AuthService {
     });
 
     // Hash refresh token for DB storage
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
 
@@ -86,7 +95,10 @@ export class AuthService {
         secret: this.configService.get('JWT_REFRESH_SECRET'),
       });
 
-      const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const tokenHash = crypto
+        .createHash('sha256')
+        .update(refreshToken)
+        .digest('hex');
 
       const tokenRecord = await this.db
         .selectFrom('refresh_tokens')
@@ -101,7 +113,11 @@ export class AuthService {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
 
-      const payload = { sub: decoded.sub, email: decoded.email, role: decoded.role };
+      const payload = {
+        sub: decoded.sub,
+        email: decoded.email,
+        role: decoded.role,
+      };
 
       const newAccessToken = this.jwtService.sign(payload, {
         secret: this.configService.get('JWT_ACCESS_SECRET'),
@@ -115,7 +131,10 @@ export class AuthService {
   }
 
   async logout(userId: string, refreshToken: string) {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
 
     await this.db
       .updateTable('refresh_tokens')
@@ -145,7 +164,7 @@ export class AuthService {
     );
 
     const resetUrl = `https://nivasapg.com/reset-password?token=${resetToken}`;
-    
+
     await this.mailService.sendMail(
       user.email,
       'Password Reset Request',
@@ -172,7 +191,7 @@ export class AuthService {
       if (Number(result.numUpdatedRows) === 0) {
         throw new BadRequestException('Failed to update password');
       }
-      
+
       // Revoke all existing refresh tokens
       await this.db
         .updateTable('refresh_tokens')
@@ -180,7 +199,6 @@ export class AuthService {
         .where('user_id', '=', decoded.sub)
         .where('revoked_at', 'is', null)
         .execute();
-
     } catch (e) {
       throw new BadRequestException('Invalid or expired reset token');
     }

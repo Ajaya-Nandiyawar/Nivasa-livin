@@ -39,7 +39,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col border-r border-border bg-card">
       <div className="flex h-16 items-center px-6 py-4">
-        <h1 className="text-xl font-bold text-primary">Nivasa PG</h1>
+        <h1 className="text-xl font-bold text-primary">NIVASA</h1>
       </div>
       
       <div className="flex-1 overflow-y-auto py-4">

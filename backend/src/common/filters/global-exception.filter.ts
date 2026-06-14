@@ -39,7 +39,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       code = 'HTTP_EXCEPTION';
     } else {
       const dbError = exception as DatabaseError;
-      
+
       // Node-postgres error codes
       if (dbError.code) {
         switch (dbError.code) {

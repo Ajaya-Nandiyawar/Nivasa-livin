@@ -150,7 +150,7 @@ export default function ReportsPage() {
                       tickFormatter={v => `₹${v >= 1000 ? Math.round(v / 1000) + "k" : v}`}
                     />
                     <Tooltip
-                      formatter={(v: number) => [`₹${v.toLocaleString("en-IN")}`, "Revenue"]}
+                      formatter={(v: any) => [`₹${Number(v).toLocaleString("en-IN")}`, "Revenue"]}
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderRadius: 8, border: "1px solid hsl(var(--border))" }}
                       labelStyle={{ color: "hsl(var(--foreground))", fontWeight: "bold" }}
                     />
@@ -224,7 +224,7 @@ export default function ReportsPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(v: number) => [`₹${v.toLocaleString("en-IN")}`, "Total"]}
+                      formatter={(v: any) => [`₹${Number(v).toLocaleString("en-IN")}`, "Total"]}
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderRadius: 8, border: "1px solid hsl(var(--border))" }}
                     />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: "11px" }} />

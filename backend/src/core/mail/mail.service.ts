@@ -19,7 +19,12 @@ export class MailService {
     });
   }
 
-  async sendMail(to: string, subject: string, text: string, html?: string): Promise<void> {
+  async sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<void> {
     try {
       await this.transporter.sendMail({
         from: this.configService.get('MAIL_FROM'),

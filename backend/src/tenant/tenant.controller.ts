@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
@@ -32,7 +44,10 @@ export class TenantController {
 
   @Patch(':id')
   @Roles('SUPER_ADMIN', 'PG_ADMIN', 'MANAGER')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateTenantDto: UpdateTenantDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateTenantDto: UpdateTenantDto,
+  ) {
     return this.tenantService.update(id, updateTenantDto);
   }
 
@@ -55,7 +70,11 @@ export class TenantController {
     @UploadedFile() file: Express.Multer.File,
   ) {
     const fileName = `tenants/${id}/${Date.now()}-${file.originalname}`;
-    const result = await this.storageService.uploadFile(file.buffer, fileName, file.mimetype);
+    const result = await this.storageService.uploadFile(
+      file.buffer,
+      fileName,
+      file.mimetype,
+    );
     // In a real implementation, we would insert a record into the 'documents' table here
     return { message: 'Document uploaded', url: result.url };
   }

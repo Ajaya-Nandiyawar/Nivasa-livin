@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEmail, Matches, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  Matches,
+  IsDateString,
+} from 'class-validator';
 
 export class UpdateTenantDto {
   @IsString()
@@ -11,7 +17,9 @@ export class UpdateTenantDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Phone number must be a valid E.164 number' })
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Phone number must be a valid E.164 number',
+  })
   phone?: string;
 
   @IsString()
@@ -20,7 +28,9 @@ export class UpdateTenantDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^\+?[1-9]\d{1,14}$/, { message: 'Emergency phone number must be a valid E.164 number' })
+  @Matches(/^\+?[1-9]\d{1,14}$/, {
+    message: 'Emergency phone number must be a valid E.164 number',
+  })
   emergency_contact_phone?: string;
 
   @IsString()
