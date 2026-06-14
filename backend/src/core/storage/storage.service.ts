@@ -20,6 +20,7 @@ export class StorageService {
         accessKeyId: this.configService.getOrThrow('R2_ACCESS_KEY_ID'),
         secretAccessKey: this.configService.getOrThrow('R2_SECRET_ACCESS_KEY'),
       },
+      forcePathStyle: true,
     });
   }
 
