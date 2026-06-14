@@ -13,11 +13,13 @@ Deploy the `frontend/` directory to **Vercel**.
 | Variable Name | Description | Example / Recommended Value |
 | :--- | :--- | :--- |
 | `NEXT_PUBLIC_API_URL` | The public endpoint of the deployed NestJS backend | `https://nivasa-backend-production.up.railway.app/api/v1` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project API URL | `https://yjqvomuqdhawmxbenvcw.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable/anon API key | `sb_publishable_IeFZR4nvIJAkF_4a4eTwFA_xZwT2-Uz` |
 
 ### Steps
 1. Import the repository in Vercel.
 2. Select the `frontend` folder as the root directory.
-3. Configure the `NEXT_PUBLIC_API_URL` environment variable.
+3. Configure the `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` environment variables.
 4. Click **Deploy**. Vercel will automatically build the Next.js app using `npm run build`.
 
 ---
