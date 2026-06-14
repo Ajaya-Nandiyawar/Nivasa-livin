@@ -1,3 +1,6 @@
+import dns from 'dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import { Client } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
