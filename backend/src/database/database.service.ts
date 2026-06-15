@@ -9,12 +9,22 @@ export class DatabaseService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
+    const connectionString = process.env.DATABASE_URL;
+    let servername: string | undefined = undefined;
+    if (connectionString) {
+      try {
+        servername = new URL(connectionString).hostname;
+      } catch (e) {}
+    }
+
+    const useSSL = connectionString?.includes('supabase') || connectionString?.includes('render') || process.env.NODE_ENV === 'production';
+
     super({
       dialect: new PostgresDialect({
         pool: new Pool({
-          connectionString: process.env.DATABASE_URL,
-          ssl: process.env.DATABASE_URL?.includes('supabase') || process.env.DATABASE_URL?.includes('render') || process.env.NODE_ENV === 'production'
-            ? { rejectUnauthorized: false }
+          connectionString,
+          ssl: useSSL
+            ? { rejectUnauthorized: false, servername }
             : undefined,
         }),
       }),

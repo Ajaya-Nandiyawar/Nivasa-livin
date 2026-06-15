@@ -48,4 +48,18 @@ export class UpdateTenantDto {
   @IsString()
   @IsOptional()
   blood_group?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^\d{12}$/, { message: 'Aadhaar must be exactly 12 digits' })
+  aadhaar_number?: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, { message: 'Invalid PAN format' })
+  pan_number?: string;
+
+  @IsString()
+  @IsOptional()
+  status?: string;
 }

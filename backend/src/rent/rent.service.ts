@@ -10,6 +10,8 @@ import { MailService } from '../core/mail/mail.service';
 import { StorageService } from '../core/storage/storage.service';
 import { RentFilterDto } from './dto/rent-filter.dto';
 import { PaymentDto } from './dto/payment.dto';
+import { CreateRentDto } from './dto/create-rent.dto';
+import { UpdateRentDto } from './dto/update-rent.dto';
 import PDFDocument from 'pdfkit';
 import { sql } from 'kysely';
 
@@ -297,5 +299,124 @@ export class RentService {
       );
       doc.end();
     });
+  }
+
+  async create(dto: CreateRentDto) {
+    const tenant = await this.db
+      .selectFrom('tenants')
+      .select('id')
+      .where('id', '=', dto.tenant_id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+
+    const booking = await this.db
+      .selectFrom('bookings')
+      .select('id')
+      .where('tenant_id', '=', dto.tenant_id)
+      .where('status', '=', 'ACTIVE')
+      .executeTakeFirst();
+
+    if (!booking) {
+      throw new BadRequestException('Tenant has no active booking');
+    }
+
+    const result = await this.db
+      .insertInto('rent_records')
+      .values({
+        booking_id: booking.id,
+        tenant_id: dto.tenant_id,
+        period_month: dto.period_month,
+        period_year: dto.period_year,
+        rent_amount: dto.rent_amount.toString(),
+        paid_amount: '0',
+        balance: dto.rent_amount.toString(),
+        due_date: new Date(dto.due_date),
+        status: 'PENDING',
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+
+    return { message: 'Rent record created successfully', id: result.id };
+  }
+
+  async update(id: string, dto: UpdateRentDto) {
+    return await this.db.transaction().execute(async (trx) => {
+      const record = await trx
+        .selectFrom('rent_records')
+        .select(['id', 'rent_amount', 'paid_amount', 'balance', 'due_date', 'status'])
+        .where('id', '=', id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
+
+      if (!record) {
+        throw new NotFoundException('Rent record not found');
+      }
+
+      const updateData: any = {
+        updated_at: new Date(),
+      };
+
+      let newRentAmount = parseFloat(record.rent_amount);
+      if (dto.rent_amount !== undefined) {
+        newRentAmount = dto.rent_amount;
+        updateData.rent_amount = dto.rent_amount.toString();
+      }
+
+      if (dto.due_date !== undefined) {
+        updateData.due_date = new Date(dto.due_date);
+      }
+
+      if (dto.status !== undefined) {
+        updateData.status = dto.status;
+        if (dto.status === 'PAID') {
+          updateData.paid_amount = newRentAmount.toString();
+          updateData.balance = '0';
+        } else if (dto.status === 'PENDING') {
+          updateData.paid_amount = '0';
+          updateData.balance = newRentAmount.toString();
+        } else {
+          const existingPaid = parseFloat(record.paid_amount);
+          const newBalance = newRentAmount - existingPaid;
+          updateData.balance = newBalance.toString();
+        }
+      } else if (dto.rent_amount !== undefined) {
+        const existingPaid = parseFloat(record.paid_amount);
+        const newBalance = newRentAmount - existingPaid;
+        updateData.balance = newBalance.toString();
+        if (newBalance <= 0) {
+          updateData.status = 'PAID';
+        } else if (existingPaid > 0) {
+          updateData.status = 'PARTIAL';
+        } else {
+          updateData.status = record.status;
+        }
+      }
+
+      await trx
+        .updateTable('rent_records')
+        .set(updateData)
+        .where('id', '=', id)
+        .execute();
+
+      return { message: 'Rent record updated successfully' };
+    });
+  }
+
+  async remove(id: string) {
+    const result = await this.db
+      .updateTable('rent_records')
+      .set({ deleted_at: new Date(), updated_at: new Date() })
+      .where('id', '=', id)
+      .executeTakeFirst();
+
+    if (Number(result.numUpdatedRows) === 0) {
+      throw new NotFoundException('Rent record not found');
+    }
+
+    return { message: 'Rent record deleted successfully' };
   }
 }

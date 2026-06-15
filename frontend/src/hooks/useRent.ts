@@ -83,3 +83,56 @@ export function useRecordPaymentMutation() {
     },
   });
 }
+
+export interface CreateRentPayload {
+  tenant_id: string;
+  period_month: number;
+  period_year: number;
+  rent_amount: number;
+  due_date: string;
+}
+
+export interface UpdateRentPayload {
+  rent_amount?: number;
+  due_date?: string;
+  status?: RentStatus;
+}
+
+export function useCreateRentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateRentPayload) => {
+      const { data } = await apiClient.post('/rent', payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rent'] });
+    },
+  });
+}
+
+export function useUpdateRentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: UpdateRentPayload }) => {
+      const { data } = await apiClient.patch(`/rent/${id}`, payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rent'] });
+    },
+  });
+}
+
+export function useDeleteRentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.delete(`/rent/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rent'] });
+    },
+  });
+}

@@ -256,18 +256,71 @@ export class TenantService {
   }
 
   async update(id: string, dto: UpdateTenantDto) {
-    const result = await this.db
-      .updateTable('tenants')
-      .set({ ...dto, updated_at: new Date() })
-      .where('id', '=', id)
-      .where('deleted_at', 'is', null)
-      .executeTakeFirst();
+    return await this.db.transaction().execute(async (trx) => {
+      const current = await trx
+        .selectFrom('tenants')
+        .select(['id', 'status'])
+        .where('id', '=', id)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
 
-    if (Number(result.numUpdatedRows) === 0) {
-      throw new NotFoundException('Tenant not found');
-    }
+      if (!current) {
+        throw new NotFoundException('Tenant not found');
+      }
 
-    return { message: 'Tenant updated successfully' };
+      // Convert dob to date_of_birth if present
+      const { dob, ...rest } = dto;
+      const updateData: any = {
+        ...rest,
+        updated_at: new Date(),
+      };
+      if (dob) {
+        updateData.date_of_birth = new Date(dob);
+      }
+
+      // Perform tenant update
+      await trx
+        .updateTable('tenants')
+        .set(updateData)
+        .where('id', '=', id)
+        .execute();
+
+      // If status changed to VACATED or INACTIVE, check out the tenant
+      if (dto.status && (dto.status === 'VACATED' || dto.status === 'INACTIVE')) {
+        // Find active booking
+        const booking = await trx
+          .selectFrom('bookings')
+          .select(['id', 'bed_id'])
+          .where('tenant_id', '=', id)
+          .where('status', '=', 'ACTIVE')
+          .executeTakeFirst();
+
+        if (booking) {
+          // Update booking status
+          await trx
+            .updateTable('bookings')
+            .set({
+              status: 'CHECKED_OUT',
+              check_out_date: new Date(),
+              updated_at: new Date(),
+            })
+            .where('id', '=', booking.id)
+            .execute();
+
+          // Set bed status to VACANT
+          await trx
+            .updateTable('beds')
+            .set({
+              status: 'VACANT',
+              updated_at: new Date(),
+            })
+            .where('id', '=', booking.bed_id)
+            .execute();
+        }
+      }
+
+      return { message: 'Tenant updated successfully' };
+    });
   }
 
   async softDelete(id: string) {

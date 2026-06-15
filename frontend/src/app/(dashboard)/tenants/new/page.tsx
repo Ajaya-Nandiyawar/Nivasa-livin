@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -37,14 +37,32 @@ type FormValues = z.infer<typeof schema>;
 const STEPS = ["Personal Info", "Allocation & Booking", "Review"];
 
 export default function AddTenantPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2 text-muted-foreground">Loading onboarding form...</span>
+      </div>
+    }>
+      <AddTenantForm />
+    </Suspense>
+  );
+}
+
+function AddTenantForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const bedIdParam = searchParams.get("bed_id");
+  const rentParam = searchParams.get("monthly_rent");
+
   const [currentStep, setCurrentStep] = useState(0);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const { mutate: createTenant, isPending } = useCreateTenantMutation();
 
-  const { register, handleSubmit, trigger, getValues, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, trigger, getValues, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema) as any,
     defaultValues: {
       full_name: "", phone: "", email: "", dob: "",
@@ -54,7 +72,18 @@ export default function AddTenantPage() {
       check_in_date: "", billing_date: 1,
     },
     mode: "onTouched",
+    shouldUnregister: false,
   });
+
+  useEffect(() => {
+    if (bedIdParam) {
+      setValue("bed_id", bedIdParam, { shouldValidate: true });
+    }
+    if (rentParam) {
+      setValue("monthly_rent", Number(rentParam), { shouldValidate: true });
+      setValue("security_deposit", Number(rentParam) * 2, { shouldValidate: true }); // Default to 2 months rent
+    }
+  }, [bedIdParam, rentParam, setValue]);
 
   const stepFields: Array<(keyof FormValues)[]> = [
     ["full_name", "phone", "email", "dob", "emergency_contact_name", "emergency_contact_phone", "permanent_address", "aadhaar_number"],

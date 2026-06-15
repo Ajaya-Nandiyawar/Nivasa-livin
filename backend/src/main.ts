@@ -1,5 +1,5 @@
 import dns from 'dns';
-dns.setDefaultResultOrder('ipv4first');
+dns.setDefaultResultOrder('verbatim');
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';

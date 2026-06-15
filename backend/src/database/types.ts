@@ -99,6 +99,7 @@ export interface TenantsTable {
   occupation: string | null;
   permanent_address: string | null;
   created_by: string | null;
+  status: Generated<string>;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: Date | null;

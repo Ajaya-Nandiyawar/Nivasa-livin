@@ -17,6 +17,7 @@ export interface Tenant {
   date_of_birth: string | null;
   occupation: string | null;
   permanent_address: string | null;
+  status?: string | null;
   created_at: string;
   // Joined from active booking
   booking_id?: string | null;
@@ -94,6 +95,20 @@ export function useCreateTenantMutation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    },
+  });
+}
+
+export function useUpdateTenantMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: Partial<CreateTenantPayload> & { status?: string } }) => {
+      const { data } = await apiClient.patch(`/tenants/${id}`, payload);
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['tenants', 'detail', variables.id] });
     },
   });
 }

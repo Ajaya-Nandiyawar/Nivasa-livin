@@ -1,5 +1,10 @@
 import dns from 'dns';
-dns.setDefaultResultOrder('ipv4first');
+dns.setDefaultResultOrder('verbatim');
+
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import { Client } from 'pg';
 import * as fs from 'fs';
@@ -13,11 +18,23 @@ async function runMigrations() {
   }
 
   console.log('Connecting to database for migrations...');
+  const useSSL = connectionString.includes('supabase') || connectionString.includes('render') || process.env.NODE_ENV === 'production';
+  console.log(`Connection string contains 'supabase': ${connectionString.includes('supabase')}`);
+  console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`Resolved useSSL: ${useSSL}`);
+  
+  let servername: string | undefined = undefined;
+  try {
+    const parsedUrl = new URL(connectionString);
+    servername = parsedUrl.hostname;
+    console.log(`Parsed SNI servername: ${servername}`);
+  } catch (e) {
+    console.warn('Could not parse hostname from connection string:', e);
+  }
+
   const client = new Client({
     connectionString,
-    ssl: connectionString.includes('supabase') || connectionString.includes('render') || process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
-      : undefined
+    ssl: useSSL ? { rejectUnauthorized: false, servername } : undefined
   });
   await client.connect();
 
