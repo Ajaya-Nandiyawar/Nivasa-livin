@@ -1,6 +1,8 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('verbatim');
 
+import 'dotenv/config';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
@@ -12,8 +14,13 @@ async function bootstrap() {
 
   const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3002',
     'https://nivasa-livin.vercel.app',
   ];
+
+  if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+  }
 
   const envOrigins = process.env.ALLOWED_ORIGINS;
   if (envOrigins) {

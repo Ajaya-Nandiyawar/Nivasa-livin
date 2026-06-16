@@ -59,6 +59,35 @@ export class CreateTenantDto {
   @IsOptional()
   blood_group?: string;
 
+  // New fields
+  @IsString()
+  @IsOptional()
+  guardian_name?: string;
+
+  @IsString()
+  @IsOptional()
+  guardian_mobile?: string;
+
+  @IsString()
+  @IsOptional()
+  guardian_relation?: string;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsString()
+  @IsOptional()
+  company_college?: string;
+
+  @IsString()
+  @IsOptional()
+  lead_source?: string;
+
+  @IsUUID()
+  @IsOptional()
+  referred_by_tenant_id?: string;
+
   // Booking fields
   @IsUUID()
   bed_id: string;

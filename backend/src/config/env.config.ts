@@ -6,6 +6,7 @@ export const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: z.coerce.number().default(4000),
+  FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 
   // Database
   DATABASE_URL: z.string().url(),
@@ -13,6 +14,7 @@ export const envSchema = z.object({
   // Auth (JWT)
   JWT_ACCESS_SECRET: z.string().min(10),
   JWT_REFRESH_SECRET: z.string().min(10),
+  DISABLE_RATE_LIMIT: z.string().optional().default('false'),
 
   // Cloudflare R2
   R2_ACCOUNT_ID: z.string().min(1),

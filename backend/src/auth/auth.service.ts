@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -15,6 +16,10 @@ import { MailService } from '../core/mail/mail.service';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -163,7 +168,8 @@ export class AuthService {
       { secret: this.configService.get('JWT_ACCESS_SECRET'), expiresIn: '1h' },
     );
 
-    const resetUrl = `https://nivasapg.com/reset-password?token=${resetToken}`;
+    const frontendUrl = this.configService.get('FRONTEND_URL') || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
     await this.mailService.sendMail(
       user.email,
@@ -184,7 +190,11 @@ export class AuthService {
 
       const result = await this.db
         .updateTable('users')
-        .set({ password_hash: hash, updated_at: new Date() })
+        .set({ 
+          password_hash: hash, 
+          password_changed_at: new Date(),
+          updated_at: new Date() 
+        })
         .where('id', '=', decoded.sub)
         .executeTakeFirst();
 
@@ -199,8 +209,237 @@ export class AuthService {
         .where('user_id', '=', decoded.sub)
         .where('revoked_at', 'is', null)
         .execute();
+
+      // Write audit log
+      await this.db
+        .insertInto('audit_logs')
+        .values({
+          user_id: decoded.sub,
+          action: 'PASSWORD_RESET',
+          entity_type: 'users',
+          entity_id: decoded.sub,
+          old_values: null,
+          new_values: null,
+        })
+        .execute();
     } catch (e) {
+      if (e instanceof BadRequestException) throw e;
       throw new BadRequestException('Invalid or expired reset token');
     }
+  }
+
+  async getProfile(userId: string) {
+    const user = await this.db
+      .selectFrom('users')
+      .select(['id', 'email', 'role', 'full_name', 'phone', 'is_active', 'created_at', 'updated_at'])
+      .where('id', '=', userId)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', userId)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Email uniqueness check
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.db
+        .selectFrom('users')
+        .selectAll()
+        .where('email', '=', dto.email)
+        .where('deleted_at', 'is', null)
+        .executeTakeFirst();
+
+      if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException('Email already in use');
+      }
+    }
+
+    // Perform update
+    await this.db
+      .updateTable('users')
+      .set({
+        ...dto,
+        updated_at: new Date(),
+      })
+      .where('id', '=', userId)
+      .execute();
+
+    // Write audit log
+    await this.db
+      .insertInto('audit_logs')
+      .values({
+        user_id: userId,
+        action: 'PROFILE_UPDATED',
+        entity_type: 'users',
+        entity_id: userId,
+        old_values: JSON.stringify({
+          full_name: user.full_name,
+          email: user.email,
+          phone: user.phone,
+        }),
+        new_values: JSON.stringify(dto),
+      })
+      .execute();
+
+    return this.getProfile(userId);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', userId)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isMatch = await bcrypt.compare(dto.current_password, user.password_hash);
+    if (!isMatch) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    const saltRounds = 12;
+    const hash = await bcrypt.hash(dto.new_password, saltRounds);
+
+    await this.db
+      .updateTable('users')
+      .set({
+        password_hash: hash,
+        password_changed_at: new Date(),
+        updated_at: new Date(),
+      })
+      .where('id', '=', userId)
+      .execute();
+
+    // Revoke all existing refresh tokens
+    await this.db
+      .updateTable('refresh_tokens')
+      .set({ revoked_at: new Date() })
+      .where('user_id', '=', userId)
+      .where('revoked_at', 'is', null)
+      .execute();
+
+    // Write audit log
+    await this.db
+      .insertInto('audit_logs')
+      .values({
+        user_id: userId,
+        action: 'PASSWORD_CHANGED',
+        entity_type: 'users',
+        entity_id: userId,
+        old_values: null,
+        new_values: null,
+      })
+      .execute();
+  }
+
+  async getUsers() {
+    return this.db
+      .selectFrom('users')
+      .select(['id', 'email', 'role', 'full_name', 'phone', 'is_active', 'created_at', 'updated_at'])
+      .where('deleted_at', 'is', null)
+      .orderBy('created_at', 'desc')
+      .execute();
+  }
+
+  async createUser(dto: CreateUserDto, creatorId: string) {
+    const existingUser = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('email', '=', dto.email)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (existingUser) {
+      throw new ConflictException('Email already in use');
+    }
+
+    const saltRounds = 12;
+    const hash = await bcrypt.hash(dto.password, saltRounds);
+
+    const result = await this.db
+      .insertInto('users')
+      .values({
+        email: dto.email,
+        password_hash: hash,
+        role: dto.role,
+        full_name: dto.full_name,
+        phone: dto.phone || null,
+      })
+      .returning(['id', 'email', 'role', 'full_name', 'phone', 'is_active', 'created_at'])
+      .executeTakeFirst();
+
+    if (!result) {
+      throw new BadRequestException('Failed to create user');
+    }
+
+    // Write audit log
+    await this.db
+      .insertInto('audit_logs')
+      .values({
+        user_id: creatorId,
+        action: 'USER_CREATED',
+        entity_type: 'users',
+        entity_id: result.id,
+        old_values: null,
+        new_values: JSON.stringify(result),
+      })
+      .execute();
+
+    return result;
+  }
+
+  async updateUser(userId: string, dto: UpdateUserDto, creatorId: string) {
+    const user = await this.db
+      .selectFrom('users')
+      .selectAll()
+      .where('id', '=', userId)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.db
+      .updateTable('users')
+      .set({
+        ...dto,
+        updated_at: new Date(),
+      })
+      .where('id', '=', userId)
+      .execute();
+
+    // Write audit log
+    await this.db
+      .insertInto('audit_logs')
+      .values({
+        user_id: creatorId,
+        action: dto.is_active === false ? 'USER_DISABLED' : 'USER_UPDATED',
+        entity_type: 'users',
+        entity_id: userId,
+        old_values: JSON.stringify({ role: user.role, is_active: user.is_active }),
+        new_values: JSON.stringify(dto),
+      })
+      .execute();
+
+    return this.getProfile(userId);
   }
 }

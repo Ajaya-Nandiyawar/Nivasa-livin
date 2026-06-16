@@ -4,6 +4,7 @@ import {
   IsEmail,
   Matches,
   IsDateString,
+  IsUUID,
 } from 'class-validator';
 
 export class UpdateTenantDto {
@@ -62,4 +63,44 @@ export class UpdateTenantDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsString()
+  @IsOptional()
+  guardian_name?: string;
+
+  @IsString()
+  @IsOptional()
+  guardian_mobile?: string;
+
+  @IsString()
+  @IsOptional()
+  guardian_relation?: string;
+
+  @IsString()
+  @IsOptional()
+  gender?: string;
+
+  @IsString()
+  @IsOptional()
+  company_college?: string;
+
+  @IsString()
+  @IsOptional()
+  kyc_status?: string;
+
+  @IsString()
+  @IsOptional()
+  police_verification_status?: string;
+
+  @IsString()
+  @IsOptional()
+  lead_source?: string;
+
+  @IsUUID()
+  @IsOptional()
+  referred_by_tenant_id?: string;
+
+  @IsString()
+  @IsOptional()
+  blacklist_reason?: string;
 }

@@ -39,6 +39,7 @@ export interface UsersTable {
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: Date | null;
+  password_changed_at: Date | null;
 }
 
 export interface PropertiesTable {
@@ -100,6 +101,17 @@ export interface TenantsTable {
   permanent_address: string | null;
   created_by: string | null;
   status: Generated<string>;
+  guardian_name: string | null;
+  guardian_mobile: string | null;
+  guardian_relation: string | null;
+  gender: string | null;
+  company_college: string | null;
+  kyc_status: Generated<string>;
+  police_verification_status: Generated<string>;
+  lead_source: string | null;
+  referred_by_tenant_id: string | null;
+  blacklist_reason: string | null;
+  blacklisted_at: Date | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
   deleted_at: Date | null;
@@ -108,13 +120,147 @@ export interface TenantsTable {
 export interface TenantDocumentsTable {
   id: Generated<string>;
   tenant_id: string;
-  document_type: DocumentTypeEnum;
+  document_type: string;
+  file_name: string | null;
   file_url: string;
   file_key: string | null;
+  verified: Generated<boolean>;
+  verified_by: string | null;
   uploaded_at: Generated<Date>;
   created_at: Generated<Date>;
+  created_by: string | null;
   updated_at: Generated<Date>;
+  updated_by: string | null;
   deleted_at: Date | null;
+}
+
+export interface TenantChargesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  charge_type: string;
+  amount: string;
+  due_date: Date;
+  status: Generated<string>;
+  created_at: Generated<Date>;
+  created_by: string | null;
+  updated_at: Generated<Date>;
+  updated_by: string | null;
+}
+
+export interface TenantPaymentsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  amount: string;
+  payment_type: string;
+  payment_mode: string;
+  reference_number: string | null;
+  payment_date: Date;
+  created_at: Generated<Date>;
+  created_by: string | null;
+}
+
+export interface TenantDepositTransactionsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  transaction_type: string;
+  amount: string;
+  remarks: string | null;
+  created_at: Generated<Date>;
+  created_by: string | null;
+}
+
+export interface TenantAgreementsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  agreement_number: string | null;
+  start_date: Date;
+  end_date: Date;
+  rent_amount: string;
+  deposit_amount: string;
+  status: Generated<string>;
+  document_id: string | null;
+  agreement_alert_sent: Generated<boolean>;
+  created_at: Generated<Date>;
+  created_by: string | null;
+  updated_at: Generated<Date>;
+  updated_by: string | null;
+}
+
+export interface TenantTagsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  tag: string;
+}
+
+export interface TenantCheckoutsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  notice_date: Date | null;
+  planned_exit_date: Date | null;
+  actual_exit_date: Date | null;
+  keys_returned: Generated<boolean>;
+  room_inspected: Generated<boolean>;
+  damage_found: Generated<boolean>;
+  damage_notes: string | null;
+  deposit_refunded: Generated<boolean>;
+  checkout_status: Generated<string>;
+  created_at: Generated<Date>;
+  created_by: string | null;
+  updated_at: Generated<Date>;
+  updated_by: string | null;
+}
+
+export interface TenantNotesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  note: string;
+  created_at: Generated<Date>;
+  created_by: string | null;
+  updated_at: Generated<Date>;
+  updated_by: string | null;
+}
+
+export interface TenantRoomTransfersTable {
+  id: Generated<string>;
+  tenant_id: string;
+  from_property_id: string | null;
+  from_room_id: string | null;
+  from_bed_id: string | null;
+  to_property_id: string | null;
+  to_room_id: string | null;
+  to_bed_id: string | null;
+  reason: string | null;
+  transferred_by: string | null;
+  transferred_at: Generated<Date>;
+}
+
+export interface TenantCommunicationLogsTable {
+  id: Generated<string>;
+  tenant_id: string;
+  channel: string;
+  direction: string;
+  message: string;
+  sent_by: string | null;
+  created_at: Generated<Date>;
+}
+
+export interface TenantActivitiesTable {
+  id: Generated<string>;
+  tenant_id: string;
+  activity_type: string;
+  metadata: any;
+  created_at: Generated<Date>;
+}
+
+export interface TenantStaysTable {
+  id: Generated<string>;
+  tenant_id: string;
+  property_id: string | null;
+  room_id: string | null;
+  bed_id: string | null;
+  start_date: Date;
+  end_date: Date | null;
+  created_at: Generated<Date>;
 }
 
 export interface BookingsTable {
@@ -252,6 +398,17 @@ export interface DB {
   beds: BedsTable;
   tenants: TenantsTable;
   tenant_documents: TenantDocumentsTable;
+  tenant_charges: TenantChargesTable;
+  tenant_payments: TenantPaymentsTable;
+  tenant_deposit_transactions: TenantDepositTransactionsTable;
+  tenant_agreements: TenantAgreementsTable;
+  tenant_tags: TenantTagsTable;
+  tenant_checkouts: TenantCheckoutsTable;
+  tenant_notes: TenantNotesTable;
+  tenant_room_transfers: TenantRoomTransfersTable;
+  tenant_communication_logs: TenantCommunicationLogsTable;
+  tenant_activities: TenantActivitiesTable;
+  tenant_stays: TenantStaysTable;
   bookings: BookingsTable;
   rent_records: RentRecordsTable;
   payments: PaymentsTable;
